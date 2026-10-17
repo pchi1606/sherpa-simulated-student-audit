@@ -1,0 +1,818 @@
+% S9 manuscript — JEDM official template conversion (paper-jedm.tex)
+% Template: jedm.cls from the official JEDM LaTeX package 2024_08_02_jedm-latex.zip,
+% downloaded from the journal's Information for Authors page
+% (https://jedm.educationaldatamining.org/index.php/JEDM/information/authors).
+% Converted from paper.tex (article class with hand-rolled JEDM-spec formatting).
+% FORMAT CONVERSION ONLY — every word of content, number, citation key,
+% figure/table, and the manual bibliography is preserved verbatim from paper.tex.
+% Anonymized for double-blind review (empty author block).
+\documentclass[notitlepage,12pt]{jedm}
+
+\usepackage{mathptmx}              % Times Roman body + math
+\usepackage[scaled=0.92]{helvet}   % Helvetica for title/headings (JEDM spec)
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+% jedm.cls pre-allocates \bibhang; release it so natbib can allocate its own
+\let\bibhang\relax
+\usepackage[round]{natbib}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+
+\title{No Learning Under This Protocol:\\A Preregistered Validity Audit of a Downsized Frozen-Student Replication of Sherpa's Simulator}
+\author{}   % anonymized; double-blind submission
+\date{}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Large language models are increasingly used as simulated students:
+synthetic learners that should mirror real students, used to train
+tutors and study pedagogy. We report a preregistered, independent validity audit of the student
+simulator (Sherpa), which conditions a weight-frozen (weights held fixed) language model on six
+preference archetypes via gating mechanisms (preference filters on teacher
+messages). Replicating only the student
+side, we generated 300 episodes (six archetypes, 50 trajectories each, five
+tutoring turns) under a fixed-strategy teacher and compared behavioral
+statistics against five thousand real student sequences from the
+ASSISTments 2009--2010 skill-builder dataset. The simulated students
+do not learn at all: a correctness probe (re-asking the student to solve the
+problem after tutoring) is frozen behaviorally (constant
+across turns) at its baseline value in 297
+of 300 trajectories, and the 24 preregistered two-sample tests are
+degenerate by construction---the simulated metrics collapse to point masses
+while real students show the classic learning curve, so their p-values add
+nothing beyond the descriptive mismatch. No behavioral metric
+separates the six archetypes. Gate decomposition shows nearly
+half of adaptive-gate rejections are fail-closed judge parse failures
+rather than preference judgments. A post-hoc positive control---injecting
+the ground-truth boxed answer (the convention of
+enclosing the final answer in a \texttt{\textbackslash boxed\{\}} tag)
+into the probe's history in 162 of 300 episodes (four of six archetypes)---moves
+zero of the wrong-at-baseline probes to correct. This partial, post-hoc
+control cannot separate instruction-following from incapacity: the
+``solve from scratch'' probe instruction may simply tell the student to
+ignore history. The freeze therefore cannot be attributed
+to preference gating specifically, and our conclusions are scoped to this
+downsized protocol.
+{\parindent0pt
+\textbf{Keywords:} large language models, preregistration, simulated students, validity audit
+}
+\end{abstract}
+
+\section{Introduction}
+
+Simulated students---language-model agents designed to behave like human
+learners---are becoming infrastructure. They train tutoring systems
+\citep{xu2026sherpa}, pilot instructional interventions, and stand in for
+human subjects in education research. Their scientific value rests entirely
+on a validity claim: that the simulator's behavior mirrors real student
+behavior closely enough for conclusions to transfer. That claim is rarely
+audited independently. The stakes are concrete: a tutoring policy trained against
+a simulator that cannot learn optimizes pedagogy signals that would never
+transfer to real students---compute spent training on an instrument that
+measures nothing.
+
+Sherpa \citep{xu2026sherpa} proposes archetype-conditioned simulated
+students: a frozen language model whose teaching interactions are filtered
+through preference gates (enforced in the paper's pipeline by a 27B
+language-model judge around an 8B teacher), producing six ``distinct'' student archetypes (for
+example, attempt-diagnosis and subgoal-decomposition). The paper's evaluation
+targets the \emph{teacher} it trains---student accuracy gains, MathTutorBench
+pedagogy scores, and a human preference study---while the student simulator's
+own validity as a learner goes untested---most basically, whether the
+simulated students learn like students. Real students exhibit
+one of the most robust phenomena in cognitive science---the power law of
+practice, in which error rates decay with opportunity \citep{newell1981}. A
+simulator that cannot reproduce it is not a student model in any behaviorally
+meaningful sense. Our probes re-attempt the \emph{same} problem after
+tutoring, so the test here is the minimal within-problem version---whether
+instruction leaves any trace on the next attempt (retention), not transfer
+across problems; a simulator failing even this bar fails the stronger claim
+a fortiori.
+
+We preregistered an independent audit of Sherpa's student simulator before
+generating a single trajectory (preregistration locked 2026-10-08; one logged
+deviation). Replicating only the student side---frozen Qwen3-1.7B with
+verbatim gate prompts from the released repository---we generated 300
+episodes (6 archetypes $\times$ 50 trajectories $\times$ 5 tutoring turns)
+under a fixed-strategy teacher built from the paper's own teaching templates,
+and compared behavioral statistics against 5{,}000 real (student, skill)
+sequences from the public ASSISTments 2009--2010 skill-builder dataset
+\citep{feng2009}.
+
+Our findings are uniformly negative:
+
+\begin{enumerate}
+\item \textbf{Zero learning.} Probe correctness is frozen at its unaided
+baseline in 297 of 300 trajectories. Mean correctness moves 0.347
+$\rightarrow$ 0.343 across five tutoring turns. Exactly one trajectory
+improved---with zero accepted tutoring turns (probe noise; see
+\S\ref{sec:res-probe}). Two got
+\emph{worse} after accepted tutoring.
+\item \textbf{Degenerate distributional mismatch.} All 24 preregistered
+two-sample Kolmogorov--Smirnov tests (4 metrics $\times$ 6 archetypes,
+Holm-adjusted) reject the null. But the ``difference'' is degenerate:
+the simulated distributions collapse to point masses---slopes $0.000$
+$\pm$ 0.000, error persistence $0.833$ $\pm$ 0.000, hint
+responsiveness $0.000$ $\pm$ 0.000 across four archetypes, with only the three
+mixed trajectories giving the other two any spread---while real students show the
+classic learning curve (0.499 $\rightarrow$ 0.688, mean slope $-0.35$).
+\item \textbf{Indistinguishable archetypes.} On every behavioral metric, the
+six archetypes are identical. The only differences are gate acceptance rates
+(20--46\%) and surface reply lengths.
+\item \textbf{Gate dysfunction, decomposed.} Of 1{,}500 teacher turns, 17.2\%
+are rejected by the guidance gate, 24.7\% by adaptive-gate \emph{parse
+failures} (the 1.7B judge cannot emit valid tagged XML after three retries;
+fail-closed), and 26.3\% by reasoned preference rejections; 31.9\% are
+accepted. Nearly half the adaptive rejection mass is judge incompetence, not
+preference enforcement.
+\item \textbf{No dose--response.} The correlation between accepted tutoring
+turns per episode and probe improvement is $r=-0.04$ (95\% CI $[-0.15,
+0.08]$, $n=300$). Five accepted turns move the probe about as much as
+zero---and in 23 episodes where the teacher's boxed final answer was
+\emph{accepted} into the student history, zero probes improved. Post-hoc
+checking revealed every one of the 45 leaked boxed answers in the 32
+accepted messages was numerically wrong (0/45 correct), so this null
+indicts the 1.7B teacher's quality rather than testing whether tutoring
+content can move probes (\S\ref{sec:res-boxed}).
+\end{enumerate}
+
+This is a negative-validity audit, framed as such: the contribution is not a
+better simulator but a preregistered demonstration
+that this simulator design, as implemented, exhibits no
+student-like learning dynamics whatsoever. The gate judge and teacher are
+downsized to 1.7B (a CPU constraint) versus the paper's 27B judge and 8B
+teacher, which explains part of the gate dysfunction---but it cannot explain
+the frozen probes, because even injected true answers move nothing
+(\S\ref{sec:res-control}).
+
+\section{Related work}
+\label{sec:related}
+
+\paragraph{Language-model simulated students.} The use of language models as
+stand-ins for human learners has grown rapidly, but validity evidence has
+lagged behind adoption. \citet{scarlatos2026} formally define the
+student-simulation task and benchmark simulation methods on linguistic,
+behavioral, and cognitive metrics, finding that prompting-based simulators
+perform poorly; \citet{yuan2026} identify a ``competence paradox''---broadly
+capable language models asked to emulate partially knowledgeable learners
+produce unrealistic error patterns and learning dynamics---and argue for
+epistemic fidelity over surface realism. Sherpa \citep{xu2026sherpa} is
+among the most elaborate recent systems: six preference archetypes enforced
+by language-model judges (a guidance gate plus an adaptive gate). Its
+evaluation targets the \emph{teacher}---student accuracy gains,
+MathTutorBench pedagogy scores, and a human pairwise-preference study---while
+the student simulator's own behavioral validity \emph{as a learner} is
+assumed, not tested. Our audit is, to our knowledge, the first
+\emph{independent, preregistered} test of whether a recent
+simulated-student system reproduces real student \emph{learning dynamics}
+against real student data: prior validity work targets static response
+patterns, not learning over time. We test not whether the
+simulator is internally coherent, but whether it learns like a student at
+all.
+
+Validation efforts elsewhere cluster around response patterns rather than
+learning dynamics. \citet{lu2024} build knowledge-component-grounded
+``generative students'' whose simulated responses correlate highly with real
+students' item difficulties---a positive validity result, but for static
+response patterns, not learning over time. \citet{srivatsa2025} place eleven
+language models on the same IRT ability scale as real student populations
+and find systematic misalignment: strong models overshoot every grade level.
+\citet{an2026} identify the mechanism: prompt-based simulators answer at
+their built-in capability level (96.8--100\% accuracy) regardless of the
+assigned mastery profile. \citet{scarlatos2025} bring knowledge tracing into
+tutor--student dialogues with language models. These simulators are deployed
+as training environments for tutors \citep{xu2026sherpa}, as proxy students
+for piloting assessments \citep{srivatsa2025}, and as stand-ins for real
+respondents in item evaluation \citep{lu2024}---all roles that presuppose
+student-like behavior. None test whether a simulator's behavior
+\emph{changes} like a student's under instruction: the learning-dynamics gap
+our audit targets.
+
+\paragraph{Student modeling and learning curves.} The power law of
+practice---error rate decaying as a power function of opportunities---is
+among the most replicated findings in cognitive science \citep{newell1981}
+and underpins knowledge-tracing models from Bayesian knowledge tracing
+\citep{corbett1994} onward. The ASSISTments datasets \citep{feng2009} have
+anchored decades of student-modeling research. Any claim to simulate
+students inherits this literature as its validity baseline.
+
+\paragraph{Audits and replication.} Independent audits of high-profile
+machine-learning artifacts have repeatedly surfaced validity gaps, and
+preregistered replication is the mechanism by which those gaps become
+credible rather than anecdotal \citep{nosek2018}. We adopt that mechanism
+here.
+
+\section{Preregistration}
+\label{sec:prereg}
+
+The full preregistration (locked 2026-10-08, before any study trajectory was
+generated) is archived with the reproduction package. In brief:
+
+\paragraph{Study question.} Do Sherpa's archetype-conditioned simulated
+students reproduce real student learning dynamics? In a validity audit
+the roles reverse: the hypothesis of interest is mismatch, and the
+preregistered tests are a decision-rule formality---the evidential weight
+lies in the descriptive degeneracy. H1: simulated students
+differ measurably from real students on at least one of (M1) learning-curve
+shape, (M2) error persistence, (M3) hint responsiveness. H0: no significant
+distributional difference on any preregistered metric (24 two-sample KS
+tests, Holm--Bonferroni, $\alpha=0.05$).
+
+\paragraph{Protocol.} Six preference archetypes---attempt-diagnosis (Att.),
+subgoal-decomposition (Sub.), contrastive-comparison (Ctr.),
+causal-justification (Cau.), step-demonstration (Stp.),
+independent-verification (Ver.)---implemented with frozen Qwen3-1.7B, a
+``you are Sam, a student'' system message, and the verbatim adaptive-gate
+preference text from the paper's Appendix D.1.2). Per episode: an unaided
+baseline probe ($c_0$), then five turns of fixed-strategy teacher instruction
+(the paper's Appendix D.5.1 templates, strategy matched to the archetype's
+preference) filtered through the verbatim guidance gate and then the
+adaptive gate (up to three parse retries, fail-closed, per the released
+repository), then a greedy probe fork ($c_t$) graded by the repository's
+two-stage scorer. Fifty problems per archetype, disjoint, drawn from the
+paper's shipped filtered MATH test split (528 problems). Real-data
+comparison: 5{,}000 seeded (user, skill) sequences from the ASSISTments
+2009--2010 skill-builder data (first five opportunities, main problems
+only).
+
+\paragraph{Metrics.} M1: per-trajectory power-law exponent from
+$\log(e_t)=\alpha+b\log(t)$ on smoothed error rates (constant probe vectors
+yield slope exactly 0 by construction)---it measures whether the student
+improves with practice, the learning-curve signature. M2a:
+Laplace-smoothed $P(\text{err}_{t+1}\mid\text{err}_t)$---whether mistakes
+persist or get corrected (for constant probe vectors this equals
+$(4+1)/(4+2)=0.833$ by the smoothing, a definitional constant rather than
+an estimated persistence). M2b: maximum error streak---the depth of
+uncorrected failure runs. M3: for simulated trajectories, mean($c_t\mid$guidance accepted) minus
+mean($c_t\mid$guidance rejected); for real trajectories, next-opportunity
+correctness after
+a hint versus after no hint---whether instruction moves subsequent
+performance. Full definitions are in the preregistration.
+
+\paragraph{One deviation.} On 2026-10-09, the context window was raised from
+2048 to 4096 tokens after a deterministic overflow at episode 31 crashed
+every relaunch. Context size does not change model logits for prompts that
+fit in 2048 tokens (verified post hoc from the banked artifacts: no single
+model call in the 31 banked episodes exceeded 1{,}470 prompt tokens), so the 31 banked episodes remain comparable; the
+alternative (dropping the episode) would have broken the 300-episode design.
+The post-hoc answer-injection control (\S\ref{sec:res-control}) is likewise
+logged in the deviation log as a post-hoc addition: it was stopped after
+162 of 300 episodes (2-CPU compute contention at roughly five minutes per
+episode; episodes processed in file order, so the last two archetypes never
+ran).
+
+\paragraph{Stated limitations.} Competition-mathematics versus K-12 domain
+mismatch; downsized 1.7B judge and teacher (CPU constraint); five turns
+versus the paper's ten; Q4\_K\_M quantization (taken as a stated
+assumption). See \S\ref{sec:limitations} for the full discussion.
+
+\paragraph{Preregistration boundary.} The preregistration covers the 24 KS
+tests and the metrics in \S\ref{sec:res-learn}--\S\ref{sec:res-arch}. The gate
+decomposition (\S\ref{sec:res-gates}), boxed-answer and dose--response
+analyses (\S\ref{sec:res-boxed}), the probe-stochasticity check
+(\S\ref{sec:res-probe}), and the answer-injection positive control
+(\S\ref{sec:res-control}) are exploratory, post-hoc analyses conducted after
+the frozen-probe result was observed; they are labeled as such and carry no
+preregistered decision rule.
+
+\section{Methods}
+\label{sec:methods}
+
+\begin{center}
+\begin{minipage}{0.94\columnwidth}
+\hrule\vspace{0.6em}
+\noindent\textbf{Protocol at a glance.} \textbf{Probe:} a greedy
+(temperature-0.0) re-attempt of the \emph{same} problem by the frozen
+student, run on a fork of the accepted-turn history; the unaided baseline
+probe ($c_0$) sees no tutoring, each post-tutoring probe ($c_1$--$c_5$)
+sees the full accepted history. \textbf{Gate:} the two-stage filter---the
+guidance gate, then the archetype's adaptive gate---deciding whether a
+teacher turn enters the student's visible history; rejected turns are
+hidden and replaced by a scripted complaint. \textbf{Fork:} every probe
+branches off the current accepted history instead of continuing the
+dialogue, so probe correctness measures whether the tutoring history
+taught anything.
+\vspace{0.6em}\hrule
+\end{minipage}
+\end{center}
+
+\subsection{Simulation}
+
+All generation used llama-cpp-python on CPU (Qwen3-1.7B Q4\_K\_M GGUF).
+Generation parameters were locked in the preregistration: teacher sampling
+at temperature 0.7, gates at 0.0, student replies at 0.7, probes greedy
+(temperature 0.0), intended as deterministic state read-outs---an assumption
+that is violated: greedy probes are generation-stochastic, though their
+graded verdicts are stable (see \S\ref{sec:res-probe})---and a temperature-0.0
+answer-judge fallback. Each probe is a fork of the current accepted-turn
+history: the baseline probe ($c_0$) sees only the system prompt, while each
+post-tutoring probe ($c_t$) re-attempts the task with the full accepted
+tutoring history in context (rejected turns excluded), so tutoring that
+teaches would move the probe. Thinking mode was disabled in the paper. The master
+seed was 20261008 with per-episode seeds derived by hashing. Rejected turns
+never enter the student-visible history (the repository's hidden-from-student
+turn semantics); the student instead emits the paper's scripted complaint.
+Every generation is logged with seeds (more than 7{,}800 generations in
+total).
+
+\paragraph{Filter fidelity.} The shipped filtered split is described as
+retaining problems the student fails unaided, yet our greedy baseline
+probes answer 34.7\% correctly---which is not a filter failure. Sherpa's
+own Table~1 reports the student's overall unaided accuracy on these
+problems as 36\%, and our 34.7\% $\pm$ 2.7\% reproduces it ($z=-0.49$
+against 36\%). The paper's unaided estimate comes from 8 repeated samples
+per problem with thinking disabled, matching our greedy no-think probe;
+the filter retains problems with ``room to improve,'' not guaranteed
+failures. Baseline behavior is therefore consistent with the paper's own
+calibration, and the freeze cannot be dismissed as a filter artifact.
+
+\subsection{Real-data matching}
+
+We used the ASSISTments 2009--2010 skill-builder data (401{,}756 rows,
+4{,}217 students, 123 skills; officially free to use). Analysis units are
+(user, skill) sequences with filters for main problems only, tutor mode, at
+least five opportunities, and complete correctness records; the documented
+order-identifier de-duplication was applied. The comparison pool is a seeded
+sample of 5{,}000 eligible sequences. Domain mismatch is a stated limitation
+(see Section~\ref{sec:prereg}): real trajectories span five opportunities on
+different problems sharing a skill, while simulated trajectories span five
+turns on one competition-mathematics problem. The comparison is
+distributional, not item-matched.
+
+\subsection{Output completeness}
+
+Before any analysis, we verified output completeness: 300 of 300 episodes
+present (6 $\times$ 50 exactly), five turns each, all probe vectors complete
+and binary, 300 unique problems disjoint across archetypes, and all internal
+consistency checks passing (rejected turns carry no student reply plus a
+complaint; accepted turns carry replies; correctness vectors match baseline
+plus probes). No partials and no gaps.
+
+Preregistered exclusions: M2a excludes trajectories with no errors in the
+pair window (12, 24, 13, 23, 12, 19 per archetype in Att./Sub./Ctr./Cau./Stp./Ver.
+order; 1{,}146 of 5{,}000 real sequences); M3 excludes trajectories with
+all-accepted or all-rejected turns (8, 3, 29, 21, 5, 6; 3{,}531 real). The KS
+table in Appendix~A reports effective $n$ per test.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{The simulated students do not learn}
+\label{sec:res-learn}
+
+Figure~\ref{fig:curves} shows mean probe correctness by position. Real
+students trace the classic learning curve, 0.499 $\pm$ 0.007 $\rightarrow$
+0.688 $\pm$ 0.007 over five opportunities. Every simulated archetype is
+flat: pooled correctness moves 0.347 $\rightarrow$ 0.343. In 297 of 300
+trajectories, the probe vector is constant at its baseline value (195
+all-wrong, 65.0\%; 102 all-correct, 34.0\%); the remaining three (1.0\%)
+are mixed. The single
+improving trajectory had zero accepted tutoring turns.
+The two trajectories that got \emph{worse} after accepted tutoring
+(\texttt{contrastive-comparison\_016}, \texttt{causal-justification\_044},
+both correct at baseline) are the only hint in the data of tutoring-induced
+harm, a thread for follow-up work rather than a claim.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_learning_curves.png}
+\caption{Mean correctness by probe (simulated) or opportunity (real). Real
+students (ASSISTments, $n$=5{,}000) show the power-law learning curve; all
+six simulated archetypes ($n$=50 each) are flat. Error bars show $\pm$SE.}
+\label{fig:curves}
+\end{figure}
+
+\subsection{Degenerate distributional mismatch}
+\label{sec:res-ks}
+
+Table~\ref{tab:metrics} reports the preregistered metrics (mean $\pm$ SD).
+The 24 KS tests are a preregistered formality: with the simulated
+distributions collapsed to point masses, the p-values add nothing beyond
+the descriptive degeneracy below, which is where the evidential weight
+lies. The simulated distributions are degenerate: M1 slopes $\equiv$ 0.000
+$\pm$ 0.000, M2a $\equiv$ 0.833 $\pm$ 0.000, and M3 $\equiv$ 0.000 $\pm$
+0.000 in four archetypes, the other two showing only trace spread from
+the three mixed trajectories. Real students show M1 mean slope $-0.35$
+(SD 1.03), M2a 0.467 (SD 0.184), M2b mean streak 1.60 (SD 1.41), and M3
+mean hint lift 0.087 (SD 0.498).
+
+\begin{table}[t]
+\centering
+\caption{Preregistered metrics, mean $\pm$ SD. Simulated
+$n$=50 per archetype; real $n$=5{,}000. Archetype abbreviations:
+Att.=attempt-diagnosis, Sub.=subgoal-decomposition, Ctr.=contrastive-comparison,
+Cau.=causal-justification, Stp.=step-demonstration, Ver.=independent-verification.
+Post-exclusion counts are archived with the reproduction package.}
+\label{tab:metrics}
+\begin{tabular}{lcccc}
+\toprule
+Archetype & M1 slope & M2a persist. & M2b streak & M3 hint-resp. \\
+\midrule
+Att. & 0.000$\pm$0.000 & 0.833$\pm$0.000 & 3.80$\pm$2.14 & 0.000$\pm$0.000 \\
+Sub. & 0.000$\pm$0.000 & 0.833$\pm$0.000 & 2.60$\pm$2.50 & 0.000$\pm$0.000 \\
+Ctr. & 0.045$\pm$0.312 & 0.831$\pm$0.014 & 3.66$\pm$2.19 & $-$0.024$\pm$0.106 \\
+Cau. & 0.035$\pm$0.244 & 0.832$\pm$0.006 & 2.68$\pm$2.48 & $-$0.011$\pm$0.061 \\
+Stp. & 0.000$\pm$0.000 & 0.833$\pm$0.000 & 3.80$\pm$2.14 & 0.000$\pm$0.000 \\
+Ver. & 0.000$\pm$0.000 & 0.833$\pm$0.000 & 3.10$\pm$2.43 & 0.000$\pm$0.000 \\
+Real & $-$0.350$\pm$1.032 & 0.467$\pm$0.184 & 1.60$\pm$1.41 & 0.087$\pm$0.498 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All 24 preregistered KS tests reject H0 after Holm correction (the full
+table, with raw p-values, sample sizes, and bootstrap confidence intervals,
+is archived with the reproduction package). Per the preregistered decision
+rule, H1 is supported on all metric families---but the ``difference'' is
+degenerate: the simulator does not behave like a \emph{different kind} of
+student; it behaves like \emph{no student at all}.
+
+\paragraph{Construct-validity note.} The preregistered comparison is
+distributional, not construct-matched: simulated trajectories span five
+turns on a single competition-mathematics problem, while real trajectories
+span five opportunities across different problems sharing a skill; the M3
+operationalizations likewise differ (accepted-vs-rejected guidance versus
+hint-vs-no-hint, the latter confounded by help-seeking selection).
+Rejection was therefore expected even for a competent single-problem
+simulator. The evidential weight of this section lies not in the p-values
+but in the descriptive degeneracy documented above: point-mass simulated
+distributions where real students show spread and learning.
+
+\subsection{Archetypes are behaviorally indistinguishable}
+\label{sec:res-arch}
+
+On M1 through M3 the six archetype distributions coincide (all
+degenerate at the same values); a classifier given only these metrics could
+not beat chance at telling archetypes apart. The differences that exist do not
+constitute distinct learning dynamics: gate acceptance rates of 20--46\%
+($\chi^2$=54.1, $p\approx2\times10^{-10}$, df=5; 95\% Wilson confidence intervals
+archived; turns nested within episodes, so the $p$-value is descriptive) and
+surface reply lengths of 811--1{,}070 characters (Kruskal--Wallis
+$p\approx6\times10^{-7}$ with heavy overlap; likewise descriptive), and baseline accuracy of
+0.24--0.48 (confounded, because problem sets are disjoint by preregistered
+design). Sherpa's premise is that preference gates produce \emph{distinct
+student profiles}; here they produce no learning dynamics at all.
+
+\subsection{Exploratory: gate decomposition---half the rejections are judge failures}
+\label{sec:res-gates}
+
+Of 1{,}500 teacher turns, gate outcomes decompose as follows.
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Outcome & Turns & Share \\
+\midrule
+Rejected by guidance gate & 258 & 17.2\% \\
+Rejected by adaptive gate, judge parse failure (fail-closed) & 370 & 24.7\% \\
+Rejected by adaptive gate, reasoned preference failure & 394 & 26.3\% \\
+Accepted & 478 & 31.9\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{370 of 764 adaptive-gate rejections (48.4\%) are the 1.7B
+judge's inability to emit valid tagged XML}, not preference judgments
+(Figure~\ref{fig:gates}). Conditional on valid judge output,
+the adaptive gate accepts 54.8\% of turns. A manual audit of 30 sampled
+rejections (single rater; no inter-rater reliability measured, so the
+reasoned-vs-parse split is approximate) found all 15
+reasoned rejections defensible (for example, correctly flagging
+single-alternative messages for the contrastive archetype); the other 15
+were empty-reason parse failures. The
+reasoned-reject rate (26.3\%) is the cleaner estimate of genuine gate
+strictness---and it directly bounds how much of the headline 68.1\%
+rejection rate survives the judge-downsizing caveat.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_gate_decomp.png}
+\caption{Gate-pipeline outcomes per archetype (250 turns each). Nearly half
+(370 of 764, 48.4\%) of adaptive-gate rejections are fail-closed 1.7B-judge
+parse failures (red), not preference judgments (blue).}
+\label{fig:gates}
+\end{figure}
+
+\subsection{Exploratory: leaked boxed answers are all wrong; no dose--response}
+\label{sec:res-boxed}
+
+The fixed-strategy teacher was instructed never to reveal the final answer,
+yet \textbf{141 of 1{,}500 (9.4\%) teacher messages contain boxed final
+answers} (the final answer enclosed in a \texttt{\textbackslash boxed\{\}}
+tag)---the 1.7B teacher emits them regardless. The guidance gate caught
+80; 29 were adaptive-rejected; \textbf{32 were accepted into the student's
+visible history}. In the 23 episodes containing an accepted boxed answer,
+\textbf{zero probes improved}. Post-hoc checking of the 45 leaked boxed
+answers inside the 32 accepted messages shows \textbf{all 45 were
+numerically wrong} (0/45 correct against the ground truth): the 1.7B
+teacher does not merely leak answers, it leaks \emph{wrong} answers (for
+example, \texttt{causal-justification\_044} accepted $\boxed{11}$ for a
+ground truth of $12$, then got worse). This null therefore indicts teacher
+quality rather than testing whether tutoring content can move probes; the
+clean test is the positive control in \S\ref{sec:res-control}. There is no
+dose--response either: the correlation between accepted turns per episode
+and probe improvement is $r=-0.04$ (95\% CI $[-0.15, 0.08]$, $n=300$;
+Figure~\ref{fig:dose}); five accepted turns move the probe about as much
+as zero (mean change 0.016, $-$0.009, $-$0.016, 0.000, 0.000, 0.000 for
+zero through five accepted turns; $n$=62, 106, 63, 40, 19, 10).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_dose_response.png}
+\caption{Mean change in probe correctness by accepted tutoring turns per
+episode. No dose--response ($r=-0.04$). Error bars show $\pm$SE.}
+\label{fig:dose}
+\end{figure}
+
+\subsection{Exploratory: positive control---injected true answers move nothing}
+\label{sec:res-control}
+
+The preregistered protocol has no positive control: no configuration in
+which probes were expected to move, so the freeze could in principle
+reflect a broken probe loop rather than an unresponsive student. Post
+hoc---unlike the teacher-leaked (and uniformly wrong) boxed answers in
+\S\ref{sec:res-boxed}, here the injected answer is the ground-truth
+one---we injected the ground-truth boxed answer as an accepted teacher
+turn into the probe history of 162 of the 300 banked episodes and re-ran
+the identical greedy probe plus two-stage grading
+(\texttt{analysis/answer\_injection\_control.py}; logged in the deviation
+log as a post-hoc addition). The control history is built from the
+injected turn alone: it \emph{replaces}, not augments, the episode's
+accepted tutoring history, so the injected answer faces no competing
+history---the more generous test. Of the 106 episodes wrong at baseline,
+\textbf{zero flipped to correct (0/106)}: per archetype, 0/38
+attempt-diagnosis, 0/26 subgoal-decomposition, 0/36 contrastive-comparison,
+0/6 causal-justification (95\% CI [0, 2.8\%]; rule of three, $3/106$). Of the 56 already correct, 55 stayed correct
+and one flipped to wrong (1/56; 95\% CI [0.05\%, 9.5\%], consistent with
+the probe-noise rate in \S\ref{sec:res-probe}). The run stopped at 162
+episodes: a 2-CPU VM shared with other jobs ran each episode's probe plus
+grading in roughly five minutes, and compute contention halted the run.
+Episodes were processed in file order, so causal-justification stopped at
+12 of 50 while step-demonstration and independent-verification (138
+episodes combined) were never run.
+
+Two caveats bound what this control shows. First, the probe prompt
+instructs the student ``Now try to solve the problem from scratch:''---a
+direction that plausibly tells the student to ignore the history above.
+The 0/106 null is therefore consistent with an instruction-following
+alternative (the student obeying ``from scratch'' rather than consulting
+history) as well as with a genuine inability to use history content; this
+probe design cannot separate the two, and no absolute ``channel is dead''
+claim is warranted. Second, the control is partial: the 0/106 bound covers
+the four archetypes run, not the two unrun ones. The probe loop itself is
+not broken (it answers 34.7\% unaided from parametric knowledge), and the
+control rules out weak tutoring as the sole explanation of the freeze for
+the four archetypes tested---but the unresponsiveness claim is scoped to
+this solve-from-scratch probe
+instruction, not to student capacity in general. The freeze remains an
+unresponsiveness of the frozen 1.7B student under this probe instruction, not evidence
+about preference gating.
+
+\subsection{Exploratory: greedy probes are not deterministic read-outs}
+\label{sec:res-probe}
+
+The preregistration assumed temperature-0.0 probes are deterministic state
+read-outs. That assumption does not hold: among the 62 trajectories with
+zero accepted turns (identical probe context all six times), probe
+\emph{generations} varied in 54 (87\%) while graded \emph{verdicts}
+flipped in only one. Generation-level stochasticity does not propagate to
+verdicts, so the frozen-correctness finding is not an artifact of
+re-scoring a single generation; the determinism assumption is dropped.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{What failed.} Two candidate explanations fit the preregistered
+data, which could not adjudicate between them. First, \emph{the tutoring
+is vacuous}: with most teacher turns rejected and a weak 1.7B
+fixed-strategy teacher (which leaks wrong boxed answers 9.4\% of the
+time, all of them incorrect), the accepted histories that probes fork
+from are thin (mean 1.59 accepted turns per episode; 62 episodes with
+zero). We did not rate the pedagogical quality of the 478 accepted turns,
+so teaching quality remains an open question. Second, \emph{the student
+does not use its history}: the post-hoc positive control
+(\S\ref{sec:res-control}) injects the true boxed answer as the probe
+history (replacing, not augmenting, the accepted turns) and moves zero of
+106 wrong-at-baseline probes (162 episodes, 95\% CI [0, 2.8\%]). This rules
+out weak tutoring as the sole explanation, but it does not establish
+general incapacity: the probe instruction ``Now try to solve the problem
+from scratch'' plausibly tells the student to ignore history, so
+instruction-following is an explicit alternative to incapacity, and the
+control covers only four of six archetypes. The first hypothesis is true
+descriptively; under the solve-from-scratch probe instruction, the student
+is unresponsive to history content regardless of teaching quality. What the
+data rules out is the middle position: that these archetype-conditioned
+simulators, as implemented here, exhibit student-like learning dynamics.
+
+\paragraph{Which findings survive which deviation.} The 24.7\% parse-failure
+mass is the component most plausibly explained by the 1.7B judge---a 27B
+judge should reduce it, but the paper itself reports that its 8B
+training-time judge ``struggles to follow the required format in long
+contexts'' \citep{xu2026sherpa}, so format-following failure is documented
+at the paper's own judge scale and may be partly intrinsic rather than a
+pure downsizing artifact. The 26.3\% reasoned-reject rate remains the
+cleaner estimate of genuine gate strictness. The frozen probes, the null
+dose--response, and the accepted-answer-reveal nulls do not depend on judge
+quality. The fixed-strategy teacher is a deliberate scope choice as well as
+a constraint: auditing the \emph{student} simulator requires holding
+teaching fixed, because an adaptive teacher would confound student-side
+validity with teacher quality. This is also the largest deviation from the
+paper's own pipeline: its reported 20.5 percentage point improvement in
+student test accuracy came from an RL-trained 8B teacher with a teacher
+preparation stage and ten turns \citep{xu2026sherpa}; our fixed-strategy 1.7B
+teacher, no preparation stage, and five turns deliberately hold none of that
+constant. The post-hoc positive control (\S\ref{sec:res-control}) narrows
+the two: bad teaching is real (thin accepted histories, wrong leaked
+answers), but under this probe instruction the binding constraint is the
+unresponsive student---even true answers injected into history move
+nothing. The frozen-probe finding
+therefore describes the student simulator under this scoped protocol, not
+Sherpa's full system. The natural
+follow-ups are a gates-disabled ablation, a pedagogical-quality rating of
+accepted turns, and the 27B-judge replication.
+
+\paragraph{What this means for simulated-student research.} The failure mode
+we document is specific and actionable. Preference gating as a mechanism for
+\emph{distinct student profiles} is untested by internal metrics: our
+archetypes differ only in gate strictness and reply length, not in learning
+behavior. Any evaluation of simulated students should include the cheapest
+validity check available---a learning curve against a real-student
+baseline---before more elaborate claims. And gate judges should be evaluated
+on format reliability, not just judgment quality: nearly half of our adaptive
+rejections were XML parse failures. The frozen-probe pattern is a concrete
+instance of the competence paradox \citep{yuan2026}---the phenomenon in
+which a capable model emulating a weaker learner performs at its own
+capability floor, not the learner's: a broadly capable
+model asked to emulate a partially knowledgeable learner answers at its
+built-in capability level (34.7\% unaided) and cannot be moved off it by
+instruction---the ``error pattern'' is a capability floor, not a student
+profile.
+
+\paragraph{The caveat, plainly.} The 1.7B downsizing is the sharpest threat
+to our conclusions, and it cuts unevenly. It plausibly explains \emph{part}
+of the gate dysfunction (the 24.7\% parse-failure mass should shrink under
+the paper's 27B judge, though the paper documents format-struggle at its own
+8B judge scale, so this mass may not dissolve entirely; the 26.3\% reasoned-reject mass is the cleaner
+number). It cannot explain the frozen probes: the positive control shows the
+student does not use even true history content under the solve-from-scratch
+probe instruction---a scoped unresponsiveness of the weight-frozen 1.7B
+student under this protocol (the control cannot separate
+instruction-following from incapacity) rather than a gate effect. (The
+accepted-answer-reveal null is confounded by the teacher leaking wrong
+answers, \S\ref{sec:res-boxed}; the control supersedes it.) A
+27B-judge replication is the obvious follow-up; we state exactly what we
+expect it to change (gate acceptance up) and not to change (flat learning
+curves).
+
+\section{Limitations}
+\label{sec:limitations}
+
+Domain mismatch (competition mathematics versus K-12 skill builder;
+preregistered); downsized 1.7B judge and teacher (the caveat above);
+disjoint problem sets confound archetype baseline comparisons; probe
+stochasticity is unmodeled (though verdict-stable); the language-model
+answer judge's errors would propagate silently (no preregistered
+spot-check); five turns versus the paper's ten; fifty trajectories per
+archetype (CPU budget). A post-hoc positive control (injecting the true
+boxed answer into the probe history; \S\ref{sec:res-control}) moved zero
+of 106 wrong-at-baseline probes (162 episodes), so, under the
+solve-from-scratch probe instruction, the freeze reflects the student's
+unresponsiveness to history content---it cannot be attributed to
+preference gating specifically, and the conclusions are scoped to this
+frozen-student protocol.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We preregistered and executed an independent validity audit of Sherpa's
+archetype-conditioned simulated students. The verdict is negative: 300
+episodes, no measurable learning, archetypes indistinguishable on
+learning-dynamics metrics, and a
+gating pipeline in which half the rejections are judge format failures.
+A post-hoc positive control (162 episodes, four of six archetypes; 0/106
+flips, 95\% CI [0, 2.8\%]) shows the student does not use even true
+answers under the solve-from-scratch probe instruction---though this
+confounded control cannot separate instruction-following from incapacity.
+This verdict is therefore scoped to the downsized frozen-student protocol:
+it is a finding of unresponsiveness under this probe instruction, not an
+attribution to preference gating and not a claim about Sherpa's full
+system.
+Negative results of this kind---preregistered, fully reproducible, with
+every number traceable to banked artifacts---are how a research community
+learns which of its instruments actually measure what they claim. The audit
+code, data, preregistration, and one-command reproduction package are
+publicly archived.
+
+\section*{Declaration of Generative AI Software tools in the writing process}
+
+During the preparation of this work, the author used Muse Spark (version
+1.3, Meta) in all sections for drafting, analysis, and code validation,
+and for grammar correction and proofreading throughout. After using this
+tool, the author reviewed and edited the content as needed and takes full
+responsibility for the content of the publication.
+
+\section*{Competing Interests}
+
+The author declares no competing interests. No funding was received for
+this work.
+
+\section*{Data and Code Availability}
+
+The locked preregistration (\texttt{PREREGISTRATION.md}) with its
+deviation log, the 300-episode trajectory file, the real-data comparison
+pool, all analysis scripts, the post-hoc positive control, and a
+one-command reproduction package (\texttt{bash reproduce.sh}) are archived
+as supplementary material. A public code repository will be released upon
+acceptance.
+
+\begin{thebibliography}{99}
+\bibitem[Xu et~al.(2026)]{xu2026sherpa}
+XU, W., ZHANG, Y., WANG, Z.~Z., CHEN, C., AND YANG, D. 2026.
+\newblock Sherpa: Teaching LLMs to teach adaptively.
+\newblock \emph{arXiv preprint arXiv:2610.08778}.
+
+\bibitem[Feng et~al.(2009)]{feng2009}
+FENG, M., HEFFERNAN, N.~T., AND KOEDINGER, K.~R. 2009.
+\newblock Addressing the assessment challenge with an online system that tutors
+  as it assesses.
+\newblock \emph{User Modeling and User-Adapted Interaction}, 19, 243--266.
+
+\bibitem[Newell and Rosenbloom(1981)]{newell1981}
+NEWELL, A. AND ROSENBLOOM, P.~S. 1981.
+\newblock Mechanisms of skill acquisition and the law of practice.
+\newblock In Anderson, J.~R., editor, \emph{Cognitive Skills and Their
+  Acquisition}, pages 1--51. Lawrence Erlbaum Associates, Hillsdale, NJ.
+
+\bibitem[Corbett and Anderson(1994)]{corbett1994}
+CORBETT, A.~T. AND ANDERSON, J.~R. 1994.
+\newblock Knowledge tracing: Modeling the acquisition of procedural knowledge.
+\newblock \emph{User Modeling and User-Adapted Interaction}, 4, 253--278.
+
+\bibitem[Nosek et~al.(2018)]{nosek2018}
+NOSEK, B.~A., EBERSOLE, C.~R., DEHAVEN, A.~C., AND MELLOR, D.~T. 2018.
+\newblock The preregistration revolution.
+\newblock \emph{Proceedings of the National Academy of Sciences}, 115(11),
+  2600--2606.
+
+\bibitem[Scarlatos et~al.(2026)]{scarlatos2026}
+SCARLATOS, A., LEE, J., WOODHEAD, S., AND LAN, A. 2026.
+\newblock Simulated students in tutoring dialogues: Substance or illusion?
+\newblock \emph{arXiv preprint arXiv:2601.04025}.
+
+\bibitem[Lu and Wang(2024)]{lu2024}
+LU, X. AND WANG, X. 2024.
+\newblock Generative Students: Using LLM-simulated student profiles to support
+  question item evaluation.
+\newblock In \emph{Proceedings of the Eleventh ACM Conference on Learning at
+  Scale (L@S '24)}. ACM.
+
+\bibitem[Srivatsa et~al.(2025)]{srivatsa2025}
+SRIVATSA, K.~V.~A., MAURYA, K.~K., AND KOCHMAR, E. 2025.
+\newblock Can LLMs reliably simulate real students' abilities in mathematics
+  and reading comprehension?
+\newblock \emph{arXiv preprint arXiv:2507.08232}.
+
+\bibitem[An et~al.(2026)]{an2026}
+AN, Y., WANG, E., WANG, B., AND HASHMI, R. 2026.
+\newblock From mastery profile to simulated response: Stochastic student
+  knowledge graphs (SSKG) for faithful LLM student simulation.
+\newblock \emph{arXiv preprint arXiv:2608.21668}.
+
+\bibitem[Scarlatos et~al.(2025)]{scarlatos2025}
+SCARLATOS, A., BAKER, R.~S., AND LAN, A. 2025.
+\newblock Exploring knowledge tracing in tutor-student dialogues using LLMs.
+\newblock In \emph{Proceedings of the 15th International Conference on
+  Learning Analytics and Knowledge (LAK '25)}. ACM.
+
+\bibitem[Yuan et~al.(2026)]{yuan2026}
+YUAN, Z., XIAO, Y., LI, M., XUAN, W., TONG, R., DIAB, M., AND MITCHELL, T. 2026.
+\newblock Towards valid student simulation with large language models.
+\newblock \emph{arXiv preprint arXiv:2601.05473}.
+\end{thebibliography}
+
+\appendix
+
+\section{Preregistered statistical tests: full results}
+
+All 24 two-sample Kolmogorov--Smirnov tests (simulated $n$=50 per archetype,
+minus preregistered exclusions, versus the 5{,}000-sequence real pool;
+Holm--Bonferroni, $\alpha$=0.05) reject the null. The complete table with
+test statistics, raw and adjusted p-values, effective sample sizes, and
+bootstrap 95\% confidence intervals for median differences is archived in
+\texttt{analysis/ks\_tests.json} in the reproduction package.
+
+\section{Reproduction package contents}
+
+The reproduction package archives: the locked preregistration
+(\texttt{PREREGISTRATION.md}) with its deviation log; the 300-episode
+trajectory file (\texttt{results/trajectories.jsonl}); the real-data
+comparison pool and per-unit metrics; the analysis scripts that produced
+every table and figure; the post-hoc answer-injection positive control
+(\texttt{analysis/answer\_injection\_control.py} and
+\texttt{analysis/answer\_injection\_control.jsonl}); the strengthening
+analyses; and a verifier script
+that re-checks the headline numbers. One command (\texttt{bash
+reproduce.sh}) re-runs the full analysis from the banked artifacts.
+
+\end{document}

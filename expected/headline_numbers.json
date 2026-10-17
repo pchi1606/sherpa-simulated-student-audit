@@ -1,0 +1,21 @@
+{
+  "n_episodes": 300,
+  "frozen_trajectories": 297,
+  "mean_c0": 0.347,
+  "mean_c5": 0.343,
+  "ks_reject_holm": 24,
+  "gate_accepted": 478,
+  "gate_guidance_reject": 258,
+  "gate_parse_fail": 370,
+  "gate_reasoned_reject": 394,
+  "parse_share_of_adaptive": 0.484,
+  "teacher_boxed_messages": 141,
+  "episodes_accepted_boxed": 23,
+  "dose_response_r": -0.04,
+  "mean_accepted_per_episode": 1.59,
+  "episodes_zero_accepted": 62,
+  "probe_generations_varied": 54,
+  "probe_verdict_flips": 1,
+  "real_curve_start": 0.499,
+  "real_curve_end": 0.688
+}
